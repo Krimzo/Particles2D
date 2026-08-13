@@ -118,7 +118,10 @@ void Simulator::handle_input()
     }
 
     if ( window.keyboard.r )
-        fill_air();
+    {
+        static constexpr UINT AIR[4] = { UINT( Material::AIR ), 0, 0, 0 };
+        gpu.context()->ClearUnorderedAccessViewUint( m_particle_texture.access_view.get(), AIR );
+    }
 }
 
 void Simulator::handle_physics()

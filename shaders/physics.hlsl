@@ -48,14 +48,22 @@ void update_sand_at(int2 pos)
         if (!in_bounds(new_pos))
             continue;
 
-        if (FRAME[new_pos] != MATERIAL_AIR
-            && FRAME[new_pos] != MATERIAL_WATER)
-            continue;
+        uint orig;
+        InterlockedCompareExchange(FRAME[new_pos], MATERIAL_AIR,
+            MATERIAL_SAND, orig);
+        if (orig == MATERIAL_AIR)
+        {
+            FRAME[pos] = MATERIAL_AIR;
+            break;
+        }
 
-        const uint temp = FRAME[new_pos];
-        FRAME[new_pos] = FRAME[pos];
-        FRAME[pos] = temp;
-        break;
+        InterlockedCompareExchange(FRAME[new_pos], MATERIAL_WATER,
+            MATERIAL_SAND, orig);
+        if (orig == MATERIAL_WATER)
+        {
+            FRAME[pos] = MATERIAL_WATER;
+            break;
+        }
     }
 }
 
@@ -75,12 +83,13 @@ void update_water_at(int2 pos)
         if (!in_bounds(new_pos))
             continue;
 
-        if (FRAME[new_pos] != MATERIAL_AIR)
-            continue;
-
-        const uint temp = FRAME[new_pos];
-        FRAME[new_pos] = FRAME[pos];
-        FRAME[pos] = temp;
-        break;
+        uint orig;
+        InterlockedCompareExchange(FRAME[new_pos], MATERIAL_AIR,
+            MATERIAL_WATER, orig);
+        if (orig == MATERIAL_AIR)
+        {
+            FRAME[pos] = MATERIAL_AIR;
+            break;
+        }
     }
 }
