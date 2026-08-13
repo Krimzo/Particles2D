@@ -68,3 +68,37 @@ void Simulator::fill_air()
     gpu.execute_compute_shader( m_fill_air_shader.shader, kl::ceildiv<32>( frame_res.x ), kl::ceildiv<32>( frame_res.y ) );
     gpu.unbind_access_view_for_compute_shader( 0 );
 }
+
+void Simulator::handle_input()
+{
+    brush_radius += (float) window.mouse.scroll();
+
+    if ( window.keyboard.one.pressed() )
+        selected_material = MATERIAL_ROCK;
+    if ( window.keyboard.two.pressed() )
+        selected_material = MATERIAL_SAND;
+    if ( window.keyboard.three.pressed() )
+        selected_material = MATERIAL_WATER;
+
+    //const kl::Int2 mouse_pos = window.mouse.position();
+    //if ( frame.in_bounds( mouse_pos ) )
+    //{
+    //    if ( window.mouse.left )
+    //        frame.draw_circle( mouse_pos, brush_radius, selected_material, true );
+    //    if ( window.mouse.right )
+    //        frame.draw_circle( mouse_pos, brush_radius, MATERIAL_AIR, true );
+    //}
+    //
+    //if ( window.keyboard.r )
+    //    frame.fill( MATERIAL_AIR );
+}
+
+void Simulator::handle_render()
+{
+    gpu.clear_internal( kl::colors::RED );
+    copy_reformat_frame();
+    gpu.copy_resource( gpu.back_target_texture(), m_copy_frame_texture.texture );
+    //m_render_frame.draw_circle( window.mouse.position(), brush_radius, selected_material );
+    gpu.swap_buffers( true );
+    window.set_title( kl::format( "FPS: ", int( 1.0f / timer.delta() ), " Brush Radius: ", brush_radius ) );
+}

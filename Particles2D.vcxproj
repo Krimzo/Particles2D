@@ -63,8 +63,6 @@
     <ClCompile Include="klibrary\window\input\keyboard.cpp" />
     <ClCompile Include="klibrary\window\input\mouse.cpp" />
     <ClCompile Include="klibrary\window\window.cpp" />
-    <ClCompile Include="source\sim_render.cpp" />
-    <ClCompile Include="source\sim_input.cpp" />
     <ClCompile Include="source\sim_physics.cpp" />
     <ClCompile Include="source\main.cpp" />
     <ClCompile Include="source\simulator.cpp" />
