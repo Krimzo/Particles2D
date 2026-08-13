@@ -1,85 +1,94 @@
 #pragma once
 
-#include "window/system_handler.h"
-#include "window/keyboard.h"
-#include "window/mouse.h"
-#include "graphics/image.h"
+#include "window/input/key.h"
+#include "window/input/keyboard.h"
+#include "window/input/mouse.h"
+#include "window/hooks/keyboard_hook.h"
+#include "window/hooks/mouse_hook.h"
 
-#include <string>
 
-
-namespace kl::screen {
-    inline const uint2 size = {GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN)};
+namespace kl
+{
+inline const Int2 SCREEN_SIZE = {
+    GetSystemMetrics( SM_CXSCREEN ),
+    GetSystemMetrics( SM_CYSCREEN ),
+};
 }
 
-namespace kl {
-    class window
-    {
-        HINSTANCE instance_ = nullptr;
-        std::string name_ = {};
-        HWND window_ = nullptr;
-        HDC device_context_ = nullptr;
+namespace kl
+{
+struct Window : NoCopy
+{
+    Keyboard keyboard;
+    Mouse mouse;
 
-        bool in_fullscreen_ = false;
-        bool resizeable_ = true;
-        DWORD window_style_ = NULL;
-        WINDOWPLACEMENT placement_ = {};
+    std::vector<std::function<void( Int2 )>> on_resize;
+    std::vector<std::function<void( Int2 )>> on_move;
 
-        LRESULT CALLBACK window_procedure(HWND window_handle, UINT message, WPARAM w_param, LPARAM l_param) const;
-        void handle_message(const MSG& message);
+    Window( std::string_view const& name );
+    ~Window();
 
-    public:
-        keyboard keyboard = {};
-        mouse mouse = {};
+    HWND ptr() const;
+    bool process();
 
-        std::function<void(uint2)> on_resize = [](uint2)
-        {};
+    bool active() const;
+    void close() const;
 
-        window(const uint2& size, const std::string& name);
-        window(const window&) = delete;
-        window(const window&&) = delete;
-        ~window();
-        
-        void operator=(const window&) = delete;
-        void operator=(const window&&) = delete;
+    bool resizeable() const;
+    void set_resizeable( bool enabled );
 
-        HWND get_window() const;
+    bool fullscreened() const;
+    void set_fullscreen( bool enabled );
 
-        bool process(bool wait = true);
+    LONG style() const;
+    void add_style( LONG style_val );
+    void remove_style( LONG style_val );
 
-        bool is_open() const;
-        void close() const;
+    bool focused() const;
 
-        bool is_resizeable() const;
-        void set_resizeable(bool enabled);
+    void maximize() const;
+    void minimize() const;
+    void restore() const;
 
-        void maximize() const;
-        void minimize() const;
+    bool maximized() const;
+    bool minimized() const;
+    bool restored() const;
 
-        bool is_in_fullscreen() const;
-        void set_fullscreen(bool enable);
+    Int2 position() const;
+    void set_position( Int2 position ) const;
 
-        int2 position(bool client = false) const;
-        void set_position(const int2& position) const;
+    int width() const;
+    void set_width( int width ) const;
 
-        uint32_t width() const;
-        void set_width(uint32_t width) const;
+    int height() const;
+    void set_height( int height ) const;
 
-        uint32_t height() const;
-        void set_height(uint32_t height) const;
+    Int2 size() const;
+    void resize( Int2 size ) const;
 
-        uint2 size(bool client = true) const;
-        void set_size(const uint2& size, bool client = true) const;
+    float aspect_ratio() const;
+    Int2 frame_center() const;
 
-        float get_aspect_ratio() const;
-        uint2 get_frame_center() const;
+    float dpi() const;
+    float pixels_to_dips( float value ) const;
+    float dips_to_pixels( float value ) const;
 
-        void set_title(const std::string& data) const;
-        bool set_icon(const std::string& filepath) const;
+    void set_title( std::string_view const& data ) const;
+    bool set_icon( std::string_view const& filepath ) const;
 
-        void draw_pixel_data(const color* data, const uint2& size, const int2& position = {}) const;
-        void draw_image(const image& image, const int2& position = {}) const;
+    void draw_pixel_data( RGB const* data, Int2 size, Int2 position = {} ) const;
+    void draw_image( Image const& image, Int2 position = {} ) const;
 
-        void notify() const;
-    };
+    void set_dark_mode( bool enabled ) const;
+    void notify() const;
+
+private:
+    std::string m_name;
+    HINSTANCE m_instance = nullptr;
+    HWND m_window = nullptr;
+    HDC m_device_context = nullptr;
+
+    LRESULT CALLBACK window_procedure( HWND window_handle, UINT message, WPARAM w_param, LPARAM l_param ) const;
+    void handle_message( MSG const& message );
+};
 }

@@ -1,26 +1,41 @@
 #include "simulator.h"
 
 
-int main()
+Simulator::Simulator()
 {
-	kl::window window = { kl::uint2(800, 800), "Particle simulator" };
-	auto frame = kl::image(window.size());
-	std::vector<particle> particles = {};
-	kl::timer timer = {};
-	
-	window.set_icon("resource/sand.ico");
-	window.mouse.set_hidden(true);
-	particles.resize(static_cast<uint64_t>(frame.width()) * frame.height());
-	
-	timer.reset();
-	while (window.process(false)) {
-		timer.update_interval();
+    window.on_resize.emplace_back( [this]( kl::Int2 size )
+        {
+            frame.resize( size );
+            fill_air();
+        } );
+    window.resize( { 800, 800 } );
+    window.set_icon( "resource/sand.ico" );
+}
 
-		input(window, frame, particles);
-		physics(frame, particles);
-		draw(frame, particles, window.mouse.position());
-		
-		window.draw_image(frame);
-		window.set_title(kl::format("FPS: ", static_cast<int>(1 / timer.get_interval()), " Brush size: ", brush_size));
-	}
+bool Simulator::update()
+{
+    timer.update();
+    handle_input();
+    handle_physics();
+    handle_render();
+    return window.process();
+}
+
+void Simulator::fill_air()
+{
+    for ( int i = 0; i < frame.pixel_count(); i++ )
+    {
+        switch ( material_integer( frame[i] ) )
+        {
+        case iMATERIAL_AIR:
+        case iMATERIAL_ROCK:
+        case iMATERIAL_SAND:
+        case iMATERIAL_WATER:
+            break;
+
+        default:
+            frame[i] = MATERIAL_AIR;
+            break;
+        }
+    }
 }
