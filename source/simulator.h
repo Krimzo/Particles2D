@@ -39,13 +39,16 @@ struct Simulator
 private:
     kl::ComputeShader m_fill_air_shader{};
     kl::ComputeShader m_copy_frame_shader{};
+    kl::ComputeShader m_add_material_shader{};
+    kl::ComputeShader m_physics_shader{};
 
     kl::Texture m_particle_texture{ gpu };
     kl::Texture m_copy_frame_texture{ gpu };
 
     void resize_buffers( kl::Int2 size );
-    void copy_reformat_frame();
     void fill_air();
+    void copy_reformat_frame();
+    void add_material( kl::Int2 pos, Material material );
 
     void handle_input();
     void handle_physics();

@@ -10,6 +10,12 @@ Simulator::Simulator()
     m_copy_frame_shader = gpu.create_compute_shader( kl::read_file_string( "shaders/copy_frame.hlsl" ), &error );
     if ( !error.empty() )
         kl::print( "Copy Frame Shader Error: ", error );
+    m_add_material_shader = gpu.create_compute_shader( kl::read_file_string( "shaders/add_material.hlsl" ), &error );
+    if ( !error.empty() )
+        kl::print( "Add Material Shader Error: ", error );
+    m_physics_shader = gpu.create_compute_shader( kl::read_file_string( "shaders/physics.hlsl" ), &error );
+    if ( !error.empty() )
+        kl::print( "Physics Shader Error: ", error );
 
     window.on_resize.emplace_back( [this]( kl::Int2 size )
         {
@@ -51,6 +57,14 @@ void Simulator::resize_buffers( kl::Int2 size )
     m_copy_frame_texture.create_access_view();
 }
 
+void Simulator::fill_air()
+{
+    const kl::Int2 frame_res = m_particle_texture.resolution();
+    gpu.bind_access_view_for_compute_shader( m_particle_texture.access_view, 0 );
+    gpu.execute_compute_shader( m_fill_air_shader.shader, kl::ceildiv<32>( frame_res.x ), kl::ceildiv<32>( frame_res.y ) );
+    gpu.unbind_access_view_for_compute_shader( 0 );
+}
+
 void Simulator::copy_reformat_frame()
 {
     const kl::Int2 frame_res = m_particle_texture.resolution();
@@ -61,11 +75,27 @@ void Simulator::copy_reformat_frame()
     gpu.unbind_access_view_for_compute_shader( 0 );
 }
 
-void Simulator::fill_air()
+void Simulator::add_material( kl::Int2 pos, Material material )
 {
+    struct alignas( 16 ) CB
+    {
+        kl::UInt4 BRUSH_MATERIAL;
+        kl::Int2 BRUSH_POSITION;
+        float BRUSH_RADIUS;
+    } cb = {};
+
+    cb.BRUSH_POSITION = pos;
+    cb.BRUSH_RADIUS = brush_radius;
+    cb.BRUSH_MATERIAL = {
+        uint32_t( material.r ),
+        uint32_t( material.g ),
+        uint32_t( material.b ),
+        uint32_t( material.a ) };
+    m_add_material_shader.upload( cb );
+
     const kl::Int2 frame_res = m_particle_texture.resolution();
     gpu.bind_access_view_for_compute_shader( m_particle_texture.access_view, 0 );
-    gpu.execute_compute_shader( m_fill_air_shader.shader, kl::ceildiv<32>( frame_res.x ), kl::ceildiv<32>( frame_res.y ) );
+    gpu.execute_compute_shader( m_add_material_shader.shader, kl::ceildiv<32>( frame_res.x ), kl::ceildiv<32>( frame_res.y ) );
     gpu.unbind_access_view_for_compute_shader( 0 );
 }
 
@@ -80,17 +110,27 @@ void Simulator::handle_input()
     if ( window.keyboard.three.pressed() )
         selected_material = MATERIAL_WATER;
 
-    //const kl::Int2 mouse_pos = window.mouse.position();
-    //if ( frame.in_bounds( mouse_pos ) )
-    //{
-    //    if ( window.mouse.left )
-    //        frame.draw_circle( mouse_pos, brush_radius, selected_material, true );
-    //    if ( window.mouse.right )
-    //        frame.draw_circle( mouse_pos, brush_radius, MATERIAL_AIR, true );
-    //}
-    //
-    //if ( window.keyboard.r )
-    //    frame.fill( MATERIAL_AIR );
+    const kl::Int2 frame_res = m_particle_texture.resolution();
+    const kl::Int2 mouse_pos = window.mouse.position();
+
+    if ( mouse_pos.in_bounds( frame_res ) )
+    {
+        if ( window.mouse.left )
+            add_material( mouse_pos, selected_material );
+        if ( window.mouse.right )
+            add_material( mouse_pos, MATERIAL_AIR );
+    }
+
+    if ( window.keyboard.r )
+        fill_air();
+}
+
+void Simulator::handle_physics()
+{
+    const kl::Int2 frame_res = m_particle_texture.resolution();
+    gpu.bind_access_view_for_compute_shader( m_particle_texture.access_view, 0 );
+    gpu.execute_compute_shader( m_physics_shader.shader, kl::ceildiv<32>( frame_res.x ), kl::ceildiv<32>( frame_res.y ) );
+    gpu.unbind_access_view_for_compute_shader( 0 );
 }
 
 void Simulator::handle_render()

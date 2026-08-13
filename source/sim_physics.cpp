@@ -5,23 +5,6 @@ void update_at( kl::Image& frame, kl::Int2 pos );
 void update_sand_at( kl::Image& frame, kl::Int2 pos );
 void update_water_at( kl::Image& frame, kl::Int2 pos );
 
-void Simulator::handle_physics()
-{
-    //for ( int y = frame.height() - 1; y >= 0; y-- )
-    //{
-    //    if ( kl::random::gen_bool() )
-    //    {
-    //        for ( int x = 0; x < frame.width(); x++ )
-    //            update_at( frame, { x, y } );
-    //    }
-    //    else
-    //    {
-    //        for ( int x = frame.width() - 1; x >= 0; x-- )
-    //            update_at( frame, { x, y } );
-    //    }
-    //}
-}
-
 void update_at( kl::Image& frame, kl::Int2 pos )
 {
     switch ( material_integer( frame[pos] ) )
