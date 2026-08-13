@@ -12,15 +12,15 @@ void Simulator::handle_input()
     if ( window.keyboard.three.pressed() )
         selected_material = MATERIAL_WATER;
 
-    const kl::Int2 mouse_pos = window.mouse.position();
-    if ( frame.in_bounds( mouse_pos ) )
-    {
-        if ( window.mouse.left )
-            frame.draw_circle( mouse_pos, brush_radius, selected_material, true );
-        if ( window.mouse.right )
-            frame.draw_circle( mouse_pos, brush_radius, MATERIAL_AIR, true );
-    }
-
-    if ( window.keyboard.r )
-        frame.fill( MATERIAL_AIR );
+    //const kl::Int2 mouse_pos = window.mouse.position();
+    //if ( frame.in_bounds( mouse_pos ) )
+    //{
+    //    if ( window.mouse.left )
+    //        frame.draw_circle( mouse_pos, brush_radius, selected_material, true );
+    //    if ( window.mouse.right )
+    //        frame.draw_circle( mouse_pos, brush_radius, MATERIAL_AIR, true );
+    //}
+    //
+    //if ( window.keyboard.r )
+    //    frame.fill( MATERIAL_AIR );
 }

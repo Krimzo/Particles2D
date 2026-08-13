@@ -26,8 +26,8 @@ inline constexpr uint32_t iMATERIAL_WATER = material_integer( MATERIAL_WATER );
 struct Simulator
 {
     kl::Window window{ "Particle Simulator" };
+    kl::GPU gpu{ window.ptr() };
     kl::Timer timer{};
-    kl::Image frame{};
 
     Material selected_material = MATERIAL_SAND;
     float brush_radius = 25.0f;
@@ -37,8 +37,14 @@ struct Simulator
     bool update();
 
 private:
-    kl::Image m_render_frame;
+    kl::ComputeShader m_fill_air_shader{};
+    kl::ComputeShader m_copy_frame_shader{};
 
+    kl::Texture m_particle_texture{ gpu };
+    kl::Texture m_copy_frame_texture{ gpu };
+
+    void resize_buffers( kl::Int2 size );
+    void copy_reformat_frame();
     void fill_air();
 
     void handle_input();
