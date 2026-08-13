@@ -46,7 +46,7 @@ void Simulator::resize_buffers( kl::Int2 size )
     tex_des.Height = size.x;
     tex_des.MipLevels = 1;
     tex_des.ArraySize = 1;
-    tex_des.Format = DXGI_FORMAT_R8G8B8A8_UINT;
+    tex_des.Format = DXGI_FORMAT_R32_UINT;
     tex_des.SampleDesc.Count = 1;
     tex_des.Usage = D3D11_USAGE_DEFAULT;
     tex_des.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
@@ -79,18 +79,14 @@ void Simulator::add_material( kl::Int2 pos, Material material )
 {
     struct alignas( 16 ) CB
     {
-        kl::UInt4 BRUSH_MATERIAL;
         kl::Int2 BRUSH_POSITION;
         float BRUSH_RADIUS;
+        int BRUSH_MATERIAL;
     } cb = {};
 
     cb.BRUSH_POSITION = pos;
     cb.BRUSH_RADIUS = brush_radius;
-    cb.BRUSH_MATERIAL = {
-        uint32_t( material.r ),
-        uint32_t( material.g ),
-        uint32_t( material.b ),
-        uint32_t( material.a ) };
+    cb.BRUSH_MATERIAL = int( material );
     m_add_material_shader.upload( cb );
 
     const kl::Int2 frame_res = m_particle_texture.resolution();
@@ -104,11 +100,11 @@ void Simulator::handle_input()
     brush_radius += (float) window.mouse.scroll();
 
     if ( window.keyboard.one.pressed() )
-        selected_material = MATERIAL_ROCK;
+        selected_material = Material::ROCK;
     if ( window.keyboard.two.pressed() )
-        selected_material = MATERIAL_SAND;
+        selected_material = Material::SAND;
     if ( window.keyboard.three.pressed() )
-        selected_material = MATERIAL_WATER;
+        selected_material = Material::WATER;
 
     const kl::Int2 frame_res = m_particle_texture.resolution();
     const kl::Int2 mouse_pos = window.mouse.position();
@@ -118,7 +114,7 @@ void Simulator::handle_input()
         if ( window.mouse.left )
             add_material( mouse_pos, selected_material );
         if ( window.mouse.right )
-            add_material( mouse_pos, MATERIAL_AIR );
+            add_material( mouse_pos, Material::AIR );
     }
 
     if ( window.keyboard.r )

@@ -1,14 +1,9 @@
-static uint4 create_material(uint r, uint g, uint b)
-{
-    return uint4(r, g, b, 255);
-}
+static const uint MATERIAL_AIR = 0;
+static const uint MATERIAL_ROCK = 1;
+static const uint MATERIAL_SAND = 2;
+static const uint MATERIAL_WATER = 3;
 
-static const uint4 MATERIAL_AIR = create_material(135, 206, 250);
-static const uint4 MATERIAL_ROCK = create_material(108, 113, 119);
-static const uint4 MATERIAL_SAND = create_material(226, 202, 118);
-static const uint4 MATERIAL_WATER = create_material(3, 71, 112);
-
-RWTexture2D<uint4> FRAME : register(u0);
+RWTexture2D<uint> FRAME : register(u0);
 
 bool in_bounds(int2 pos);
 void update_sand_at(int2 pos);
@@ -24,9 +19,10 @@ void c_shader(uint3 thread_id : SV_DispatchThreadID)
         || thread_id.y >= frame_size.y)
         return;
 
-    if (all(FRAME[thread_id.xy] == MATERIAL_SAND))
+    const uint value = FRAME[thread_id.xy];
+    if (value == MATERIAL_SAND)
         update_sand_at(thread_id.xy);
-    else if (all(FRAME[thread_id.xy] == MATERIAL_WATER))
+    else if (value == MATERIAL_WATER)
         update_water_at(thread_id.xy);
 }
 
@@ -52,11 +48,11 @@ void update_sand_at(int2 pos)
         if (!in_bounds(new_pos))
             continue;
 
-        if (all(FRAME[new_pos] != MATERIAL_AIR)
-            && all(FRAME[new_pos] != MATERIAL_WATER))
+        if (FRAME[new_pos] != MATERIAL_AIR
+            && FRAME[new_pos] != MATERIAL_WATER)
             continue;
 
-        const uint4 temp = FRAME[new_pos];
+        const uint temp = FRAME[new_pos];
         FRAME[new_pos] = FRAME[pos];
         FRAME[pos] = temp;
         break;
@@ -79,10 +75,10 @@ void update_water_at(int2 pos)
         if (!in_bounds(new_pos))
             continue;
 
-        if (all(FRAME[new_pos] != MATERIAL_AIR))
+        if (FRAME[new_pos] != MATERIAL_AIR)
             continue;
 
-        const uint4 temp = FRAME[new_pos];
+        const uint temp = FRAME[new_pos];
         FRAME[new_pos] = FRAME[pos];
         FRAME[pos] = temp;
         break;

@@ -1,8 +1,8 @@
-uint4 BRUSH_MATERIAL;
 int2 BRUSH_POSITION;
 float BRUSH_RADIUS;
+uint BRUSH_MATERIAL;
 
-RWTexture2D<uint4> FRAME : register(u0);
+RWTexture2D<uint> FRAME : register(u0);
 
 [numthreads(32, 32, 1)]
 void c_shader(uint3 thread_id : SV_DispatchThreadID)

@@ -3,25 +3,13 @@
 #include "klibrary.h"
 
 
-using Material = kl::RGB;
-
-constexpr uint32_t material_integer( Material material )
+enum struct Material : byte
 {
-    return ( uint32_t( material.b ) << 24 ) |
-        ( uint32_t( material.g ) << 16 ) |
-        ( uint32_t( material.r ) << 8 ) |
-        uint32_t( material.a );
-}
-
-inline constexpr Material MATERIAL_AIR = { 135, 206, 250 };
-inline constexpr Material MATERIAL_ROCK = { 108, 113, 119 };
-inline constexpr Material MATERIAL_SAND = { 226, 202, 118 };
-inline constexpr Material MATERIAL_WATER = { 3, 71, 112 };
-
-inline constexpr uint32_t iMATERIAL_AIR = material_integer( MATERIAL_AIR );
-inline constexpr uint32_t iMATERIAL_ROCK = material_integer( MATERIAL_ROCK );
-inline constexpr uint32_t iMATERIAL_SAND = material_integer( MATERIAL_SAND );
-inline constexpr uint32_t iMATERIAL_WATER = material_integer( MATERIAL_WATER );
+    AIR = 0,
+    ROCK,
+    SAND,
+    WATER,
+};
 
 struct Simulator
 {
@@ -29,7 +17,7 @@ struct Simulator
     kl::GPU gpu{ window.ptr() };
     kl::Timer timer{};
 
-    Material selected_material = MATERIAL_SAND;
+    Material selected_material = Material::SAND;
     float brush_radius = 25.0f;
 
     Simulator();
