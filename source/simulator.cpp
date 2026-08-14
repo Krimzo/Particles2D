@@ -123,6 +123,14 @@ void Simulator::handle_input()
 
 void Simulator::handle_physics()
 {
+    struct alignas( 16 ) CB
+    {
+        int32_t RAND_SEED{};
+    } cb = {};
+
+    cb.RAND_SEED = kl::random::gen_int( 1'000'000'000 );
+    m_physics_shader.upload( cb );
+
     const kl::Int2 frame_res = m_particle_texture.resolution();
     gpu.bind_access_view_for_compute_shader( m_particle_texture.access_view, 0 );
     gpu.execute_compute_shader( m_physics_shader.shader, kl::ceildiv<32>( frame_res.x ), kl::ceildiv<32>( frame_res.y ) );
