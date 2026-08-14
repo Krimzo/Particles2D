@@ -7,15 +7,18 @@ Simulator::Simulator()
     m_fill_air_shader = gpu.create_compute_shader( kl::read_file_string( "shaders/fill_air.hlsl" ), &error );
     if ( !error.empty() )
         kl::print( "Fill Air Shader Error: ", error );
-    m_copy_frame_shader = gpu.create_compute_shader( kl::read_file_string( "shaders/copy_frame.hlsl" ), &error );
-    if ( !error.empty() )
-        kl::print( "Copy Frame Shader Error: ", error );
     m_add_material_shader = gpu.create_compute_shader( kl::read_file_string( "shaders/add_material.hlsl" ), &error );
     if ( !error.empty() )
         kl::print( "Add Material Shader Error: ", error );
     m_physics_shader = gpu.create_compute_shader( kl::read_file_string( "shaders/physics.hlsl" ), &error );
     if ( !error.empty() )
         kl::print( "Physics Shader Error: ", error );
+    m_copy_frame_shader = gpu.create_compute_shader( kl::read_file_string( "shaders/copy_frame.hlsl" ), &error );
+    if ( !error.empty() )
+        kl::print( "Copy Frame Shader Error: ", error );
+    m_ui_shader = gpu.create_compute_shader( kl::read_file_string( "shaders/ui.hlsl" ), &error );
+    if ( !error.empty() )
+        kl::print( "UI Shader Error: ", error );
 
     window.on_resize.emplace_back( [this]( kl::Int2 size )
         {
@@ -92,9 +95,29 @@ void Simulator::add_material( kl::Int2 pos, Material material )
     gpu.unbind_access_view_for_compute_shader( 0 );
 }
 
+void Simulator::draw_ui()
+{
+    struct alignas( 16 ) CB
+    {
+        kl::Float4 BRUSH_MATERIAL;
+        kl::Int2 BRUSH_POSITION;
+        float BRUSH_RADIUS;
+    } cb = {};
+
+    cb.BRUSH_MATERIAL = material_color( selected_material );
+    cb.BRUSH_POSITION = window.mouse.position();
+    cb.BRUSH_RADIUS = brush_radius;
+    m_ui_shader.upload( cb );
+
+    const kl::Int2 frame_res = m_particle_texture.resolution();
+    gpu.bind_access_view_for_compute_shader( m_back_buffer_av, 0 );
+    gpu.execute_compute_shader( m_ui_shader.shader, kl::ceildiv<32>( frame_res.x ), kl::ceildiv<32>( frame_res.y ) );
+    gpu.unbind_access_view_for_compute_shader( 0 );
+}
+
 void Simulator::handle_input()
 {
-    brush_radius += (float) window.mouse.scroll();
+    brush_radius -= (float) window.mouse.scroll();
 
     if ( window.keyboard.one.pressed() )
         selected_material = Material::ROCK;
@@ -125,7 +148,7 @@ void Simulator::handle_physics()
 {
     struct alignas( 16 ) CB
     {
-        int32_t RAND_SEED{};
+        int32_t RAND_SEED;
     } cb = {};
 
     cb.RAND_SEED = kl::random::gen_int( 1'000'000'000 );
@@ -141,7 +164,7 @@ void Simulator::handle_render()
 {
     gpu.clear_internal( kl::colors::RED );
     copy_reformat_frame();
-    //m_render_frame.draw_circle( window.mouse.position(), brush_radius, selected_material );
-    gpu.swap_buffers( true );
+    draw_ui();
+    gpu.swap_buffers( false );
     window.set_title( kl::format( "FPS: ", int( 1.0f / timer.delta() ), " Brush Radius: ", brush_radius ) );
 }
