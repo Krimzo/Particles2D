@@ -3,33 +3,33 @@
 #include "klibrary.h"
 
 
-using Material = kl::RGB;
-
-constexpr uint32_t material_integer( Material material )
+enum struct Material : byte
 {
-    return ( uint32_t( material.b ) << 24 ) |
-        ( uint32_t( material.g ) << 16 ) |
-        ( uint32_t( material.r ) << 8 ) |
-        uint32_t( material.a );
+    AIR = 0,
+    ROCK,
+    SAND,
+    WATER,
+};
+
+constexpr kl::Float4 material_color( Material material )
+{
+    switch ( material )
+    {
+    default: return {};
+    case Material::AIR: return kl::RGB{ 135, 206, 250 };
+    case Material::ROCK: return kl::RGB{ 108, 113, 119 };
+    case Material::SAND: return kl::RGB{ 226, 202, 118 };
+    case Material::WATER: return kl::RGB{ 3, 71, 112 };
+    }
 }
-
-inline constexpr Material MATERIAL_AIR = { 135, 206, 250 };
-inline constexpr Material MATERIAL_ROCK = { 108, 113, 119 };
-inline constexpr Material MATERIAL_SAND = { 226, 202, 118 };
-inline constexpr Material MATERIAL_WATER = { 3, 71, 112 };
-
-inline constexpr uint32_t iMATERIAL_AIR = material_integer( MATERIAL_AIR );
-inline constexpr uint32_t iMATERIAL_ROCK = material_integer( MATERIAL_ROCK );
-inline constexpr uint32_t iMATERIAL_SAND = material_integer( MATERIAL_SAND );
-inline constexpr uint32_t iMATERIAL_WATER = material_integer( MATERIAL_WATER );
 
 struct Simulator
 {
     kl::Window window{ "Particle Simulator" };
+    kl::GPU gpu{ window.ptr(), kl::IS_DEBUG, true };
     kl::Timer timer{};
-    kl::Image frame{};
 
-    Material selected_material = MATERIAL_SAND;
+    Material selected_material = Material::SAND;
     float brush_radius = 25.0f;
 
     Simulator();
@@ -37,9 +37,20 @@ struct Simulator
     bool update();
 
 private:
-    kl::Image m_render_frame;
+    kl::ComputeShader m_fill_air_shader{};
+    kl::ComputeShader m_add_material_shader{};
+    kl::ComputeShader m_physics_shader{};
+    kl::ComputeShader m_copy_frame_shader{};
+    kl::ComputeShader m_ui_shader{};
 
+    kl::Texture m_particle_texture{ gpu };
+    kl::dx::AccessView m_back_buffer_av{};
+
+    void resize_buffers( kl::Int2 size );
     void fill_air();
+    void copy_reformat_frame();
+    void add_material( kl::Int2 pos, Material material );
+    void draw_ui();
 
     void handle_input();
     void handle_physics();

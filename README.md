@@ -3,4 +3,4 @@
 One of the first projects I ever made!
 
 ## Screenshot
-![](screens/game_view.png)
+![](screen1.png)
