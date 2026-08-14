@@ -19,8 +19,6 @@ Simulator::Simulator()
 
     window.on_resize.emplace_back( [this]( kl::Int2 size )
         {
-            gpu.resize_internal( size );
-            gpu.set_viewport_size( size );
             resize_buffers( size );
             fill_air();
         } );
@@ -39,11 +37,13 @@ bool Simulator::update()
 
 void Simulator::resize_buffers( kl::Int2 size )
 {
+    m_back_buffer_av = {};
     gpu.resize_internal( size );
     gpu.set_viewport_size( size );
+    m_back_buffer_av = gpu.create_access_view( gpu.back_target_texture(), nullptr );
     kl::dx::TextureDescriptor tex_des{};
     tex_des.Width = size.x;
-    tex_des.Height = size.x;
+    tex_des.Height = size.y;
     tex_des.MipLevels = 1;
     tex_des.ArraySize = 1;
     tex_des.Format = DXGI_FORMAT_R32_UINT;
@@ -52,9 +52,6 @@ void Simulator::resize_buffers( kl::Int2 size )
     tex_des.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
     m_particle_texture.texture = gpu.create_texture( &tex_des, nullptr );
     m_particle_texture.create_access_view();
-    tex_des.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    m_copy_frame_texture.texture = gpu.create_texture( &tex_des, nullptr );
-    m_copy_frame_texture.create_access_view();
 }
 
 void Simulator::fill_air()
@@ -69,7 +66,7 @@ void Simulator::copy_reformat_frame()
 {
     const kl::Int2 frame_res = m_particle_texture.resolution();
     gpu.bind_access_view_for_compute_shader( m_particle_texture.access_view, 0 );
-    gpu.bind_access_view_for_compute_shader( m_copy_frame_texture.access_view, 1 );
+    gpu.bind_access_view_for_compute_shader( m_back_buffer_av, 1 );
     gpu.execute_compute_shader( m_copy_frame_shader.shader, kl::ceildiv<32>( frame_res.x ), kl::ceildiv<32>( frame_res.y ) );
     gpu.unbind_access_view_for_compute_shader( 1 );
     gpu.unbind_access_view_for_compute_shader( 0 );
@@ -137,7 +134,6 @@ void Simulator::handle_render()
     gpu.clear_internal( kl::colors::RED );
     copy_reformat_frame();
     //m_render_frame.draw_circle( window.mouse.position(), brush_radius, selected_material );
-    gpu.copy_resource( gpu.back_target_texture(), m_copy_frame_texture.texture );
     gpu.swap_buffers( true );
     window.set_title( kl::format( "FPS: ", int( 1.0f / timer.delta() ), " Brush Radius: ", brush_radius ) );
 }

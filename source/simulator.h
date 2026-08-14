@@ -14,7 +14,7 @@ enum struct Material : byte
 struct Simulator
 {
     kl::Window window{ "Particle Simulator" };
-    kl::GPU gpu{ window.ptr() };
+    kl::GPU gpu{ window.ptr(), kl::IS_DEBUG, true };
     kl::Timer timer{};
 
     Material selected_material = Material::SAND;
@@ -31,7 +31,7 @@ private:
     kl::ComputeShader m_physics_shader{};
 
     kl::Texture m_particle_texture{ gpu };
-    kl::Texture m_copy_frame_texture{ gpu };
+    kl::dx::AccessView m_back_buffer_av{};
 
     void resize_buffers( kl::Int2 size );
     void fill_air();
