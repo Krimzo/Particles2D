@@ -50,7 +50,7 @@ private:
     void resize_buffers( kl::Int2 size );
     void fill_air();
     void copy_reformat_frame();
-    void add_material( kl::Int2 pos, Material material );
+    void add_material( kl::Int2 pos, Material material, bool overwrite );
     void draw_ui();
 
     void handle_input();

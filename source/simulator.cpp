@@ -78,18 +78,20 @@ void Simulator::copy_reformat_frame()
     gpu.unbind_access_view_for_compute_shader( 0 );
 }
 
-void Simulator::add_material( kl::Int2 pos, Material material )
+void Simulator::add_material( kl::Int2 pos, Material material, bool overwrite )
 {
     struct alignas( 16 ) CB
     {
         kl::Int2 BRUSH_POSITION;
         float BRUSH_RADIUS;
         int BRUSH_MATERIAL;
+        int OVERWRITE_EXISTING;
     } cb = {};
 
     cb.BRUSH_POSITION = pos;
     cb.BRUSH_RADIUS = brush_radius;
     cb.BRUSH_MATERIAL = int( material );
+    cb.OVERWRITE_EXISTING = overwrite;
     m_add_material_shader.upload( cb );
 
     const kl::Int2 frame_res = m_particle_texture.resolution();
@@ -135,9 +137,9 @@ void Simulator::handle_input()
     if ( mouse_pos.in_bounds( frame_res ) )
     {
         if ( window.mouse.left )
-            add_material( mouse_pos, selected_material );
+            add_material( mouse_pos, selected_material, false );
         if ( window.mouse.right )
-            add_material( mouse_pos, Material::AIR );
+            add_material( mouse_pos, Material::AIR, true );
     }
 
     if ( window.keyboard.r )
