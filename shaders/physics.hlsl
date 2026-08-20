@@ -3,110 +3,142 @@ static const uint MATERIAL_ROCK = 1;
 static const uint MATERIAL_SAND = 2;
 static const uint MATERIAL_WATER = 3;
 
-int RAND_SEED;
+static const int2 BAD_INDEX = -1;
 
+Texture2D<uint> FRAME_COPY : register(t0);
 RWTexture2D<uint> FRAME : register(u0);
 
-int random_sign(int2 pos);
 bool in_bounds(int2 pos);
-void update_sand_at(int2 pos);
-void update_water_at(int2 pos);
+int2 goes_to(int2 pos);
+int2 comes_from(int2 pos);
+int2 sand_goes_to(int2 pos);
+int2 water_goes_to(int2 pos);
 
 [numthreads(32, 32, 1)]
 void c_shader(uint3 thread_id : SV_DispatchThreadID)
 {
-    uint2 frame_size = 0;
-    FRAME.GetDimensions(frame_size.x, frame_size.y);
-
-    if (thread_id.x >= frame_size.x
-        || thread_id.y >= frame_size.y)
+    const int2 current_index = thread_id.xy;
+    if (!in_bounds(current_index))
         return;
 
-    const uint value = FRAME[thread_id.xy];
-    if (value == MATERIAL_SAND)
-        update_sand_at(thread_id.xy);
-    else if (value == MATERIAL_WATER)
-        update_water_at(thread_id.xy);
-}
-
-int random_sign(int2 pos)
-{
-    uint2 frame_size = 0;
-    FRAME.GetDimensions(frame_size.x, frame_size.y);
-    const int index = pos.x + pos.y * (int) frame_size.x;
-    int v = RAND_SEED + index;
-    v ^= v >> 16;
-    v *= 0x7feb352du;
-    v ^= v >> 15;
-    v *= 0x846ca68bu;
-    v ^= v >> 16;
-    return (v & 1) ? 1 : -1;
+    const int2 to = goes_to(current_index);
+    if (all(to != BAD_INDEX) && all(comes_from(to) == current_index))
+    {
+        FRAME[current_index] = FRAME_COPY[to];
+        return;
+    }
+    
+    const int2 from = comes_from(current_index);
+    if (all(from != BAD_INDEX) && all(goes_to(from) == current_index))
+    {
+        FRAME[current_index] = FRAME_COPY[from];
+        return;
+    }
 }
 
 bool in_bounds(int2 pos)
 {
     int2 frame_size = 0;
-    FRAME.GetDimensions(frame_size.x, frame_size.y);
+    FRAME_COPY.GetDimensions(frame_size.x, frame_size.y);
     return pos.x >= 0 && pos.x < frame_size.x
         && pos.y >= 0 && pos.y < frame_size.y;
 }
 
-void update_sand_at(int2 pos)
+int2 goes_to(int2 pos)
 {
-    const int rand_dir = random_sign(pos);
-    const int2 OFFSETS[3] = {
-        int2(0, 1),
-        int2(-rand_dir, 1),
-        int2(rand_dir, 1) };
-
-    [unroll]
-    for (int i = 0; i < 3; i++)
+    if (!in_bounds(pos))
+        return BAD_INDEX;
+    switch (FRAME_COPY[pos])
     {
-        const int2 new_pos = pos + OFFSETS[i];
-        if (!in_bounds(new_pos))
-            continue;
+    default:
+        return BAD_INDEX;
+        break;
+        
+    case MATERIAL_SAND:
+        return sand_goes_to(pos);
+        break;
 
-        uint orig;
-        InterlockedCompareExchange(FRAME[new_pos], MATERIAL_AIR,
-            MATERIAL_SAND, orig);
-        if (orig == MATERIAL_AIR)
-        {
-            FRAME[pos] = MATERIAL_AIR;
-            break;
-        }
-
-        InterlockedCompareExchange(FRAME[new_pos], MATERIAL_WATER,
-            MATERIAL_SAND, orig);
-        if (orig == MATERIAL_WATER)
-        {
-            FRAME[pos] = MATERIAL_WATER;
-            break;
-        }
+    case MATERIAL_WATER:
+        return water_goes_to(pos);
+        break;
     }
 }
 
-void update_water_at(int2 pos)
+int2 comes_from(int2 pos)
 {
-    const int rand_dir = random_sign(pos);
-    const int2 OFFSETS[3] = {
-        int2(0, 1),
-        int2(-rand_dir, 0),
-        int2(rand_dir, 0) };
-
-    [unroll]
-    for (int i = 0; i < 3; i++)
+    if (!in_bounds(pos))
+        return BAD_INDEX;
+    static const int NEIGHBOUR_COUNT = 5;
+    static const int2 NEIGHBOUR_CELLS[NEIGHBOUR_COUNT] =
     {
-        const int2 new_pos = pos + OFFSETS[i];
-        if (!in_bounds(new_pos))
-            continue;
-
-        uint orig;
-        InterlockedCompareExchange(FRAME[new_pos], MATERIAL_AIR,
-            MATERIAL_WATER, orig);
-        if (orig == MATERIAL_AIR)
+        int2(0, -1),
+        int2(-1, -1),
+        int2(1, -1),
+        int2(-1, 0),
+        int2(1, 0),
+    };
+    int2 retval = BAD_INDEX;
+    [unroll]
+    for (int i = 0; i < NEIGHBOUR_COUNT; i++)
+    {
+        const int2 neighbour_cell = pos + NEIGHBOUR_CELLS[i];
+        if (all(goes_to(neighbour_cell) == pos))
         {
-            FRAME[pos] = MATERIAL_AIR;
+            retval = neighbour_cell;
             break;
         }
     }
+    return retval;
+}
+
+int2 sand_goes_to(int2 pos)
+{
+    static const int OFFSET_COUNT = 3;
+    static const int2 OFFSETS[OFFSET_COUNT] =
+    {
+        int2(0, 1),
+        int2(-1, 1),
+        int2(1, 1),
+    };
+    int2 retval = BAD_INDEX;
+    [unroll]
+    for (int i = 0; i < OFFSET_COUNT; i++)
+    {
+        const int2 offset_pos = pos + OFFSETS[i];
+        if (!in_bounds(offset_pos))
+            continue;
+        const uint offset_mat = FRAME_COPY[offset_pos];
+        if (offset_mat == MATERIAL_AIR || offset_mat == MATERIAL_WATER)
+        {
+            retval = offset_pos;
+            break;
+        }
+    }
+    return retval;
+}
+
+int2 water_goes_to(int2 pos)
+{
+    static const int OFFSET_COUNT = 3;
+    static const int2 OFFSETS[OFFSET_COUNT] =
+    {
+        int2(0, 1),
+        int2(-1, 0),
+        int2(1, 0),
+    };
+    int2 retval = BAD_INDEX;
+    [unroll]
+    for (int i = 0; i < OFFSET_COUNT; i++)
+    {
+        const int2 offset_pos = pos + OFFSETS[i];
+        if (!in_bounds(offset_pos))
+            continue;
+        const uint offset_mat = FRAME_COPY[offset_pos];
+        if (offset_mat == MATERIAL_AIR)
+        {
+            retval = offset_pos;
+            break;
+        }
+    }
+    return retval;
 }

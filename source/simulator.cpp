@@ -55,6 +55,9 @@ void Simulator::resize_buffers( kl::Int2 size )
     tex_des.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
     m_particle_texture.texture = gpu.create_texture( &tex_des, nullptr );
     m_particle_texture.create_access_view();
+    tex_des.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    m_particle_texture_copy.texture = gpu.create_texture( &tex_des, nullptr );
+    m_particle_texture_copy.create_shader_view();
 }
 
 void Simulator::fill_air()
@@ -146,18 +149,13 @@ void Simulator::handle_input()
 
 void Simulator::handle_physics()
 {
-    struct alignas( 16 ) CB
-    {
-        int32_t RAND_SEED;
-    } cb = {};
-
-    cb.RAND_SEED = kl::random::gen_int( 1'000'000'000 );
-    m_physics_shader.upload( cb );
-
+    gpu.copy_resource( m_particle_texture_copy.texture, m_particle_texture.texture );
     const kl::Int2 frame_res = m_particle_texture.resolution();
+    gpu.bind_shader_view_for_compute_shader( m_particle_texture_copy.shader_view, 0 );
     gpu.bind_access_view_for_compute_shader( m_particle_texture.access_view, 0 );
     gpu.execute_compute_shader( m_physics_shader.shader, kl::ceildiv<32>( frame_res.x ), kl::ceildiv<32>( frame_res.y ) );
     gpu.unbind_access_view_for_compute_shader( 0 );
+    gpu.unbind_shader_view_for_compute_shader( 0 );
 }
 
 void Simulator::handle_render()

@@ -44,6 +44,7 @@ private:
     kl::ComputeShader m_ui_shader{};
 
     kl::Texture m_particle_texture{ gpu };
+    kl::Texture m_particle_texture_copy{ gpu };
     kl::dx::AccessView m_back_buffer_av{};
 
     void resize_buffers( kl::Int2 size );
